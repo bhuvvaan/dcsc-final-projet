@@ -66,14 +66,14 @@ def separate():
     redis_client.rpush(task_queue, response_pickled)
     app.logger.debug("Task pushed to Redis logging queue.")
 
-    # Read the task from the queue
+    # Read the task from the queue  
     # We'll read from the 'toWorker' queue as an example
-    task_from_queue = redis_client.lpop("toWorker")  # Using lpop to read and remove the first element
-    if task_from_queue:
-        task_data = jsonpickle.decode(task_from_queue)  # Decode the pickled data
-        app.logger.debug(f"Task read from Redis: {task_data}")
-    else:
-        app.logger.debug("No task found in the Redis queue.")
+    # task_from_queue = redis_client.lpop("toWorker")  # Using lpop to read and remove the first element
+    # if task_from_queue:
+    #     task_data = jsonpickle.decode(task_from_queue)  # Decode the pickled data
+    #     app.logger.debug(f"Task read from Redis: {task_data}")
+    # else:
+    #     app.logger.debug("No task found in the Redis queue.")
 
     #######################################################################################################
     # MINIO
