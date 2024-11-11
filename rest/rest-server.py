@@ -22,6 +22,7 @@ app = Flask(__name__)
 # Initialize logging
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.DEBUG)
+app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB
 
 # Configure log format and handler
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -50,21 +51,6 @@ def separate():
     
     # Encode response using jsonpickle
     response_pickled = jsonpickle.encode(response)
-    
-    ###########################################################################################################
-    # REDIS
-    # Connect to Redis
-    redis_client = redis.StrictRedis(host=REDIS_MASTER_SERVICE_HOST, port=int(REDIS_MASTER_SERVICE_PORT), db=0, decode_responses=True)
-
-    # Key for the task queue
-    task_queue = "toWorker"
-    redis_client.rpush(task_queue, response_pickled)
-    app.logger.debug("Task pushed to Redis queue.")
-
-    # Key for the logging queue
-    task_queue = "logging"
-    redis_client.rpush(task_queue, response_pickled)
-    app.logger.debug("Task pushed to Redis logging queue.")
 
     # Read the task from the queue  
     # We'll read from the 'toWorker' queue as an example
@@ -112,6 +98,20 @@ def separate():
         app.logger.debug(f"Uploading {mp3_filename} to {bucketname}")
         client.put_object(bucketname, mp3_filename, mp3_stream, len(decoded_mp3_data))
         app.logger.debug(f"Successfully uploaded {mp3_filename} to {bucketname}")
+        ###########################################################################################################
+        # REDIS
+        # Connect to Redis
+        redis_client = redis.StrictRedis(host=REDIS_MASTER_SERVICE_HOST, port=int(REDIS_MASTER_SERVICE_PORT), db=0, decode_responses=True)
+
+        # Key for the task queue
+        task_queue = "toWorker"
+        redis_client.rpush(task_queue, response_pickled)
+        app.logger.debug("Task pushed to Redis queue.")
+
+        # Key for the logging queue
+        task_queue = "logging"
+        redis_client.rpush(task_queue, response_pickled)
+        app.logger.debug("Task pushed to Redis logging queue.")
     except Exception as err:
         app.logger.error("Error uploading the MP3 file")
         app.logger.error(str(err))

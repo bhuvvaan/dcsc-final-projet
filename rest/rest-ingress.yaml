@@ -2,8 +2,10 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: frontend-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "16m"  # Set the desired size limit
 spec:
-  ingressClassName: "nginx"  # <-- Use ingressClassName instead of the annotation
+  ingressClassName: "nginx"
   rules:
     - host: localhost
       http:

@@ -23,7 +23,7 @@ kubectl apply -f minio/minio-external-service.yaml
 
 kubectl apply -f worker/demucs-worker-deployment.yaml
 
-#kubectl apply -f redis-reader/redis-reader-deployment.yaml
+#kubectl apply -f redis-reader/redis-reader-deployment.yaml 
 
 #kubectl port-forward service/redis-master 6379:6379 &
 
