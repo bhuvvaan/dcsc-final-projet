@@ -1,0 +1,24 @@
+# Use the existing Demucs Docker image as the base
+FROM xserrat/facebook-demucs:latest
+
+# Install Python dependencies
+RUN pip install --no-cache-dir \
+    minio \
+    redis \
+    jsonpickle
+
+# Set environment variables for MinIO and Redis
+ENV REDIS_MASTER_SERVICE_HOST=redis-master \
+    REDIS_MASTER_SERVICE_PORT=6379 \
+    MINIO_ENDPOINT=minio:9000 \
+    MINIO_ACCESS_KEY=rootuser \
+    MINIO_SECRET_KEY=rootpass123
+
+# Set the working directory
+WORKDIR /app
+
+# Copy your script into the image
+COPY worker.py /app/worker.py
+
+# Set the entrypoint to your script
+ENTRYPOINT ["python3", "/app/worker.py"]
