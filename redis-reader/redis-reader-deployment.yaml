@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-reader
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-reader
+  template:
+    metadata:
+      labels:
+        app: redis-reader
+    spec:
+      containers:
+      - name: redis-reader
+        image: bhuv005/redis-reader:latest
+        env:
+        - name: REDIS_MASTER_SERVICE_HOST
+          value: "redis-master"  # Replace with your Redis service name
+        - name: REDIS_MASTER_SERVICE_PORT
+          value: "6379"  # Replace with your Redis service port

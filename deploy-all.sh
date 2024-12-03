@@ -30,3 +30,4 @@ kubectl apply -f worker/demucs-worker-deployment.yaml
 # # If you're using minio from the kubernetes tutorial this will forward those
 # kubectl port-forward -n minio-ns service/minio-proj 9000:9000 &
 # kubectl port-forward -n minio-ns service/minio-proj 9001:9001 &
+# kubectl port-forward -n minio-ns svc/minio-proj 9001:10.108.231.128:9001

@@ -15,9 +15,13 @@ import json
 from minio import Minio
 import base64
 import io
+from flask_cors import CORS
 
 # Initialize the Flask application
 app = Flask(__name__)
+
+# Enable CORS
+CORS(app, resources={r"/apiv1/*": {"origins": "*"}})
 
 # Initialize logging
 log = logging.getLogger('werkzeug')
@@ -46,7 +50,8 @@ def separate():
 
     response = {
         'hash': hex_hash,
-        'reason': "Song enqueued for separation"
+        'reason': "Song enqueued for separation",
+        'name': full_mp3['callback']['data']['mp3']
     }
     
     # Encode response using jsonpickle

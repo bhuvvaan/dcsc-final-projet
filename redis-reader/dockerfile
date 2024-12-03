@@ -1,0 +1,18 @@
+# Use Python base image
+FROM python:3.9-slim
+
+# Install Redis client library
+RUN pip install --no-cache-dir redis
+
+# Set environment variables for Redis
+ENV REDIS_MASTER_SERVICE_HOST=redis-master \
+    REDIS_MASTER_SERVICE_PORT=6379
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the script into the image
+COPY redis-reader.py /app/redis-reader.py
+
+# Set the entrypoint to your script
+ENTRYPOINT ["python3", "/app/redis-reader.py"]
