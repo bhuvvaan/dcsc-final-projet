@@ -11,13 +11,13 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/cont
 
 kubectl apply -f rest/rest-server.yaml
 kubectl apply -f rest/rest-service.yaml
-kubectl apply -f rest/rest-ingress.yaml
 
 helm repo add bitnami https://charts.bitnami.com/bitnami
 
 helm install -f minio/minio-config.yaml -n minio-ns --create-namespace minio-proj bitnami/minio
 #kubectl apply -f logs/logs-deployment.yaml
 
+kubectl apply -f rest/rest-ingress.yaml
 
 kubectl apply -f minio/minio-external-service.yaml
 

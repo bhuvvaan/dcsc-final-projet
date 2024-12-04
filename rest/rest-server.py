@@ -1,34 +1,34 @@
 #!/usr/bin/env python3
 
-from flask import Flask, request, Response
-import jsonpickle
 import os
 import logging
-from PIL import Image
+import hashlib
 import base64
 import io
+import sqlite3
+from flask import Flask, request, Response, session, redirect, url_for, flash, render_template
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
+from minio import Minio
+from flask_cors import CORS
+from flask import redirect
+import jsonpickle
+from PIL import Image
 import numpy as np
-import json
-import hashlib
 import redis
 import json
-from minio import Minio
-import base64
-import io
-from flask_cors import CORS
+
+
 
 # Initialize the Flask application
 app = Flask(__name__)
-
-# Enable CORS
+app.secret_key = "your_secret_key"  # Replace with a secure key
+app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB
 CORS(app, resources={r"/apiv1/*": {"origins": "*"}})
 
-# Initialize logging
+# Logging setup
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.DEBUG)
-app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB
-
-# Configure log format and handler
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(formatter)
@@ -37,7 +37,90 @@ log.addHandler(console_handler)
 REDIS_MASTER_SERVICE_HOST = os.environ.get('REDIS_MASTER_SERVICE_HOST') or 'localhost'
 REDIS_MASTER_SERVICE_PORT = os.environ.get('REDIS_MASTER_SERVICE_PORT') or 6379
 
+# Initialize SQLite database for users
+def init_db():
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+init_db()
+
+# Decorator for authentication
+def login_required(func):
+    @wraps(func)
+    def decorated_view(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        return func(*args, **kwargs)
+    return decorated_view
+
+@app.route('/')
+def home():
+    return redirect('/register')  # Redirect to the login page
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        hashed_password = generate_password_hash(password)
+
+        conn = sqlite3.connect('users.db')
+        cursor = conn.cursor()
+        try:
+            cursor.execute('INSERT INTO user (username, password) VALUES (?, ?)', (username, hashed_password))
+            conn.commit()
+        except sqlite3.IntegrityError:
+            flash('Username already exists!')
+            return redirect(url_for('register'))
+        conn.close()
+        flash('Registration successful! Please log in.')
+        return redirect(url_for('login'))
+
+    return render_template('register.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        conn = sqlite3.connect('users.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM user WHERE username = ?', (username,))
+        user = cursor.fetchone()
+        conn.close()
+
+        if user and check_password_hash(user[2], password):  # user[2] is the hashed password
+            session['user_id'] = user[0]  # user[0] is the user ID
+            flash('Login successful!')
+            return redirect(url_for('upload'))
+        else:
+            flash('Invalid username or password!')
+
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('You have been logged out.')
+    return redirect(url_for('login'))
+
+@app.route('/upload')
+@login_required
+def upload():
+    return render_template('upload.html')
+
 @app.route('/apiv1/separate', methods=['POST'])
+@login_required
 def separate():
     full_mp3 = request.get_json()
 
@@ -122,7 +205,6 @@ def separate():
         app.logger.error(str(err))
 
     return Response(response=response_pickled, status=200, mimetype="application/json")
-
 # Start Flask app
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=9999, debug=True)
