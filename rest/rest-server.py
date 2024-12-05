@@ -136,9 +136,16 @@ def separate():
         'reason': "Song enqueued for separation",
         'name': full_mp3['callback']['data']['mp3']
     }
+
+    response_to_frontend = {
+        'output': "File enqueued for processing, please await download link!"
+    }
     
     # Encode response using jsonpickle
     response_pickled = jsonpickle.encode(response)
+
+    # Encode response using jsonpickle
+    response_frontend_pickled = jsonpickle.encode(response_to_frontend)
 
     # Read the task from the queue  
     # We'll read from the 'toWorker' queue as an example
@@ -204,7 +211,7 @@ def separate():
         app.logger.error("Error uploading the MP3 file")
         app.logger.error(str(err))
 
-    return Response(response=response_pickled, status=200, mimetype="application/json")
+    return Response(response=response_frontend_pickled, status=200, mimetype="application/json")
 # Start Flask app
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=9999, debug=True)

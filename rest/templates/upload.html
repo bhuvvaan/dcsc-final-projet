@@ -85,6 +85,11 @@
             text-align: left;
             font-weight: 500; /* Optional: make the label slightly bolder */
         }
+        .response-user {
+            font-size: 16px; /* Adjust size as needed */
+            text-align: center; 
+            font-family: Roboto;
+        }
     </style>
 </head>
 <body>
@@ -120,7 +125,8 @@
                             </div>
                         </div>
                     </form>    
-                    <div id="response"></div>                                
+                    <div class="response-user mt-4" id="response"></div>         
+                    <div class="response-user mt-4" id="down-link"></div>                         
                 </div>
             </div>
         </div>
@@ -162,7 +168,7 @@
         });
 
         const result = await response.json();
-        responseDiv.textContent = JSON.stringify(result, null, 2);
+        responseDiv.textContent = JSON.stringify(result['output'], null, 2).slice(1, -1);;
         };
 
         reader.readAsDataURL(file);
