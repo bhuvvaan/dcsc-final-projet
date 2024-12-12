@@ -27,6 +27,10 @@ kubectl apply -f rest/rest-ingress.yaml
 # Add the Bitnami Helm repository
 helm repo add bitnami https://charts.bitnami.com/bitnami
 
+# helm repo add bitnami https://charts.bitnami.com/bitnami
+# helm repo update
+
+
 # Install MinIO with Helm
 helm install -f minio/minio-config.yaml -n minio-ns --create-namespace minio-proj bitnami/minio
 
@@ -49,3 +53,14 @@ kubectl wait --for=condition=available --timeout=60s deployment/demucs-worker
 # kubectl port-forward service/redis-master 6379:6379 &
 # kubectl port-forward -n minio-ns service/minio-proj 9000:9000 &
 # kubectl port-forward -n minio-ns service/minio-proj 9001:9001 &
+
+#install postgresql using Helm
+helm install my-postgresql bitnami/postgresql --set global.postgresql.auth.postgresPassword=my-password
+
+kubectl port-forward svc/my-postgresql-postgresql 5432:5432
+
+psql -h 127.0.0.1 -U postgres -d postgres
+
+kubectl apply -f postgres-config.yaml
+kubectl apply -f postgres-deployment.yaml
+kubectl apply -f postgres-service.yaml
