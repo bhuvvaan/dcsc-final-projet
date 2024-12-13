@@ -5,7 +5,7 @@ This repository includes the complete code to build a software service using Kub
 ## How to Use
 
 1. Start the Kubernetes service on Docker Desktop.
-2. Run the following command to deploy all required components:
+2. Run the following command from the root folder to deploy all required components:
 
     ```bash
     bash deploy-all.sh
