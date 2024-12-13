@@ -1,11 +1,29 @@
-# Use the existing Demucs Docker image as the base
-FROM xserrat/facebook-demucs:latest
+# Use the official Python image as the base
+FROM python:3.8-slim
+
+# Install necessary system dependencies for OpenCV, PostgreSQL, and video processing
+RUN apt-get update && apt-get install -y \
+    libgl1 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    ffmpeg \
+    postgresql-client \
+    --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set the working directory inside the container
+WORKDIR /app
+
+# Copy your Python scripts into the container
+COPY worker.py /app/worker.py
+COPY video_reader.py /app/video_reader.py
+
+# Copy requirements.txt into the container
+COPY requirements.txt /app/requirements.txt
 
 # Install Python dependencies
-RUN pip install --no-cache-dir \
-    minio \
-    redis \
-    jsonpickle
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
 # Set environment variables for MinIO and Redis
 ENV REDIS_MASTER_SERVICE_HOST=redis-master \
@@ -14,11 +32,8 @@ ENV REDIS_MASTER_SERVICE_HOST=redis-master \
     MINIO_ACCESS_KEY=rootuser \
     MINIO_SECRET_KEY=rootpass123
 
-# Set the working directory
-WORKDIR /app
-
-# Copy your script into the image
-COPY worker.py /app/worker.py
+# Expose any necessary ports (e.g., Flask application, Redis)
+EXPOSE 5000 6379
 
 # Set the entrypoint to your script
 ENTRYPOINT ["python3", "/app/worker.py"]

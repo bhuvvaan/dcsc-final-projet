@@ -17,6 +17,7 @@ from PIL import Image
 import numpy as np
 import redis
 import json
+import time
 
 
 
@@ -138,7 +139,7 @@ def separate():
     }
 
     response_to_frontend = {
-        'output': "File enqueued for processing, please await download link!"
+        'output': "File enqueued for processing, please wait for the download link!"
     }
     
     # Encode response using jsonpickle
@@ -167,7 +168,7 @@ def separate():
                    access_key=minioUser,
                    secret_key=minioPasswd)
 
-    bucketname = 'demucs-bucket'
+    bucketname = 'video-bucket'
 
     # Assuming your MP3 data is stored in a JSON object like this
     encoded_mp3_json = {
@@ -212,6 +213,68 @@ def separate():
         app.logger.error(str(err))
 
     return Response(response=response_frontend_pickled, status=200, mimetype="application/json")
+
+@app.route('/apiv1/respond', methods=['POST'])   
+@login_required
+def respond():
+# Main loop to process tasks 
+    while True:
+        try:
+            redis_client = redis.StrictRedis(host=REDIS_MASTER_SERVICE_HOST, port=int(REDIS_MASTER_SERVICE_PORT), db=0, decode_responses=True)
+            task_from_queue = redis_client.lpop("toRest")
+            if task_from_queue:
+                task_data = jsonpickle.decode(task_from_queue)
+                name_of_file = task_data['id']
+                app.logger.debug(f"Extracting link from postgres for file: {name_of_file}")
+                import psycopg2
+
+                # Connection details
+                conn = psycopg2.connect(
+                    host="my-postgresql",  # Update with your database host
+                    port=5432,             # Default PostgreSQL port
+                    user="postgres",       # Your database username
+                    password="my-password",  # Your database password
+                    database="postgres"    # The database name
+                )
+
+                # Set the isolation level to AUTOCOMMIT
+                conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
+
+                # Create a cursor object
+                cur = conn.cursor()
+
+                # Query to retrieve ppt_link from video_details
+                query = f"SELECT ppt_link FROM video_details WHERE video_id = {name_of_file};"
+
+                try:
+                    # Execute the query
+                    cur.execute(query)
+                    
+                    result = cur.fetchone()
+                    if result:
+                        ppt_link = result[0]
+                        response_to_frontend = {'ppt_link': ppt_link}
+                    else:
+                        response_to_frontend = {'error': 'No PPT link found for the given file ID'}
+
+                    response_to_frontend = jsonpickle.encode(response_to_frontend)
+                    return Response(response=response_to_frontend, status=200, mimetype="application/json")
+
+                except Exception as e:
+                    app.logger.error(f"Error occurred: {e}")
+                finally:
+                    # Close the cursor and connection
+                    cur.close()
+                    conn.close()
+
+            else:
+                app.logger.debug("No tasks in queue, waiting...")
+                time.sleep(5)
+
+        except Exception as e:
+            app.logger.debug(f"An unexpected error occurred: {e}")
+            app.logger.debug("Continuing to next iteration...")
+            time.sleep(5)
 # Start Flask app
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=9999, debug=True)

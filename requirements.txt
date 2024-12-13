@@ -1,0 +1,20 @@
+jsonpickle
+opencv-python
+numpy
+scikit-image
+matplotlib
+psycopg2-binary
+redis
+minio
+python-pptx
+pillow
+werkzeug
+flask
+flask-cors
+
+# sudo apt update
+# sudo apt install libgl1
+# sudo apt install postgresql-client-common
+
+# sudo apt update
+# sudo apt install postgresql-client

@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: brain-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: brain-service
+  template:
+    metadata:
+      labels:
+        app: brain-service
+    spec:
+      containers:
+      - name: brain-service
+        image: bhuv005/brain-service:v1
+        env:
+        - name: REDIS_MASTER_SERVICE_HOST
+          value: "redis-master"
+        - name: REDIS_MASTER_SERVICE_PORT
+          value: "6379"
+        - name: MINIO_ENDPOINT
+          value: "minio:9000"
+        - name: MINIO_ACCESS_KEY
+          value: "rootuser"
+        - name: MINIO_SECRET_KEY
+          value: "rootpass123"

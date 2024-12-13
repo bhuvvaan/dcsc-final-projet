@@ -112,11 +112,11 @@
         <div class="container container-bg">
             <div class="row">
                 <div class="col-12 col-lg-12 col-xl-12">
-                    <h1 class="plot-titles mt-4 mb-4">Upload MP3 File</h1>
+                    <h1 class="plot-titles mt-4 mb-4">Upload MP4 File</h1>
                     <form id="uploadForm" class="form-class">
                         <div class="row mb-3">
                             <div class="col-md-6 offset-md-3">
-                                <input type="file" id="audioFile" accept="audio/mp3" required>
+                                <input type="file" id="audioFile" accept="video/mp4" required>
                             </div>
                         </div>
                         <div class="row">
@@ -136,13 +136,14 @@
     const uploadForm = document.getElementById('uploadForm');
     const audioFileInput = document.getElementById('audioFile');
     const responseDiv = document.getElementById('response');
+    const downLinkDiv = document.getElementById('down-link');
 
     uploadForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         const file = audioFileInput.files[0];
         if (!file) {
-        responseDiv.textContent = "Please select an MP3 file.";
+        responseDiv.textContent = "Please select an MP4 file.";
         return;
         }
 
@@ -159,7 +160,19 @@
             }
         };
 
-        const response = await fetch("http://localhost/apiv1/separate", {
+        const response1 = await fetch("http://localhost/apiv1/separate", {
+            method: "POST",
+            headers: {
+            "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const result1 = await response1.json();
+        responseDiv.textContent = JSON.stringify(result1['output'], null, 2).slice(1, -1);;
+        
+
+        const response = await fetch("http://localhost/apiv1/respond", {
             method: "POST",
             headers: {
             "Content-Type": "application/json"
@@ -168,7 +181,7 @@
         });
 
         const result = await response.json();
-        responseDiv.textContent = JSON.stringify(result['output'], null, 2).slice(1, -1);;
+        downLinkDiv.textContent = JSON.stringify(result['ppt_link'], null, 2).slice(1, -1);;
         };
 
         reader.readAsDataURL(file);

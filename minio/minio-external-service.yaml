@@ -6,3 +6,4 @@ metadata:
 spec:
   type: ExternalName
   externalName: minio-proj.minio-ns.svc.cluster.local
+  

@@ -7,14 +7,19 @@ WORKDIR /app
 # Copy the current directory contents into the container at /app
 COPY . /app
 
-# Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir Flask jsonpickle pillow redis numpy minio flask-cors
+# Install system dependencies for psycopg2 and pip packages
+RUN apt-get update && apt-get install -y \
+    libpq-dev gcc && \
+    rm -rf /var/lib/apt/lists/*
 
-# Make port 5000 available to the world outside this container
+# Install Python dependencies
+RUN pip install --no-cache-dir Flask jsonpickle pillow redis numpy minio flask-cors psycopg2
+
+# Make port 9999 available to the world outside this container
 EXPOSE 9999
 
 # Define environment variable
 ENV FLASK_APP=rest-server.py
 
-# Run app.py when the container launches
+# Run rest-server.py when the container launches
 CMD ["python", "rest-server.py"]

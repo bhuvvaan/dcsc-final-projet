@@ -26,10 +26,7 @@ kubectl apply -f rest/rest-ingress.yaml
 
 # Add the Bitnami Helm repository
 helm repo add bitnami https://charts.bitnami.com/bitnami
-
-# helm repo add bitnami https://charts.bitnami.com/bitnami
-# helm repo update
-
+helm repo update
 
 # Install MinIO with Helm
 helm install -f minio/minio-config.yaml -n minio-ns --create-namespace minio-proj bitnami/minio
@@ -43,24 +40,25 @@ kubectl wait --namespace minio-ns \
 # Apply the external MinIO service
 kubectl apply -f minio/minio-external-service.yaml
 
-# Apply the Demucs worker deployment
-kubectl apply -f worker/demucs-worker-deployment.yaml
+# Run port forwarding for MinIO in the background
+#kubectl port-forward -n minio-ns svc/minio-proj 9000:9000 &
+#PORT_FORWARD_PID=$!  # Save the process ID of the port-forward command
 
-# Wait for the Demucs worker deployment to be ready
-kubectl wait --for=condition=available --timeout=60s deployment/demucs-worker
+# Apply the brain-service worker deployment
+kubectl apply -f worker/brain-service-worker-deployment.yaml
 
-# Optional: Port-forward Redis and MinIO services (commented if not required)
-# kubectl port-forward service/redis-master 6379:6379 &
-# kubectl port-forward -n minio-ns service/minio-proj 9000:9000 &
-# kubectl port-forward -n minio-ns service/minio-proj 9001:9001 &
+# Wait for the brain-service worker deployment to be ready
+kubectl wait --for=condition=available --timeout=60s deployment/brain-service
 
-#install postgresql using Helm
+# Install PostgreSQL using Helm
 helm install my-postgresql bitnami/postgresql --set global.postgresql.auth.postgresPassword=my-password
 
-kubectl port-forward svc/my-postgresql-postgresql 5432:5432
+# Apply PostgreSQL configurations and services
+kubectl apply -f postgres/postgres-config.yaml
+kubectl apply -f postgres/postgres-deployment.yaml
+kubectl apply -f postgres/postgres-service.yaml
 
-psql -h 127.0.0.1 -U postgres -d postgres
+# Optional: Uncomment to forward PostgreSQL port (background process)
+# kubectl port-forward svc/my-postgresql 5432:5432 &
 
-kubectl apply -f postgres-config.yaml
-kubectl apply -f postgres-deployment.yaml
-kubectl apply -f postgres-service.yaml
+

@@ -1,0 +1,13 @@
+jsonpickle
+opencv-python
+numpy
+scikit-image
+matplotlib
+psycopg2-binary
+redis
+minio
+python-pptx
+pillow
+werkzeug
+flask
+flask-cors
