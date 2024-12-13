@@ -23,4 +23,4 @@ This repository includes the complete code to build a software service using Kub
 
 ---
 
-Feel free to reach out for any improvements!
+Feel free to reach out for any improvements or comments!
