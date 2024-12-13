@@ -40,6 +40,9 @@ kubectl wait --namespace minio-ns \
 # Apply the external MinIO service
 kubectl apply -f minio/minio-external-service.yaml
 
+#kubectl apply -f minio/minio-external-ingress.yaml
+
+
 # Run port forwarding for MinIO in the background
 #kubectl port-forward -n minio-ns svc/minio-proj 9000:9000 &
 #PORT_FORWARD_PID=$!  # Save the process ID of the port-forward command

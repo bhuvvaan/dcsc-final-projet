@@ -12,82 +12,34 @@
         body {
             padding-top: 70px; /* Adjust based on the height of your navbar */
         }
-        .heading {
-            font-family: "Roboto";
-            color: white;
-            text-align: center;
-            padding-top: 20px;
-        }
-        .bold-row {
-            font-weight: bold;
-        }
-        .navbar-img {
-            width: 120px;
-            height: 35px;
-        }
-        .nav-bar-align {
-            margin-left: auto;
-        }
         .navbar-custom {
             background-color: white;
             margin-bottom: 100px; 
         }
-        .title-custom {
-            background-color: #003366; 
-            color: white;
-        }
-        .navbar-custom .nav-link, .navbar-custom .navbar-brand {
-            color: #003366;
-            font-family: 'Roboto';
-            font-size: 20px;
-            font-weight: 300;
-        }
-        .plot-source {
-            font-family: 'Roboto';
-            text-align: center;
-            color: #003366; /* Dark Blue */
-        }
-        .plot-warning {
-            font-family: 'Roboto';
-            text-align: left;
-        }
-        .plot-titles, .headings {
+        .plot-titles {
             font-family: 'Roboto';
             font-size: 35px;
             text-align: center;
-            color: #003366; /* Dark Blue */
+            color: #003366;
         }
-
         .form-class {
             font-family: 'Roboto';
             font-size: 15px;
-            /*text-align: center;*/
-            color: #4A4A4A; /* Dark Grey */
+            color: #4A4A4A;
         }
         .container-bg {
-            background-color: #F5F5F5; /* Light Grey */
+            background-color: #F5F5F5;
             padding: 20px;
             border-radius: 16px;
-            width: 60%
-       
+            width: 60%;
         }
         .color-bg {
             background-color: #003366;  
             padding-bottom: 10px; 
         }
-        .section {
-            padding: 30px; /* Adjusted padding for sections */
-            min-height: 100vh;
-        }
-        .form-label {
-            display: block;
-            font-size: 15px; /* Adjust size as needed */
-            text-align: left;
-            font-weight: 500; /* Optional: make the label slightly bolder */
-        }
         .response-user {
-            font-size: 16px; /* Adjust size as needed */
-            text-align: center; 
+            font-size: 16px;
+            text-align: center;
             font-family: Roboto;
         }
     </style>
@@ -95,23 +47,13 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-light navbar-custom fixed-top">
         <div class="container">
-            <a class="navbar-brand" href="#">
-                PPT Gaze
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
-                <div class="navbar-nav nav-bar-align ms-auto">
-                    <a class="nav-link ms-2" id="nav-link-format1" aria-current="page" href="{{ url_for('logout') }}">Log Out</a>
-                </div>
-            </div>
+            <a class="navbar-brand" href="#">PPT Gaze</a>
         </div>
     </nav>
     <div id="load" class="container-fluid color-bg section">
         <div class="container container-bg">
             <div class="row">
-                <div class="col-12 col-lg-12 col-xl-12">
+                <div class="col-12">
                     <h1 class="plot-titles mt-4 mb-4">Upload MP4 File</h1>
                     <form id="uploadForm" class="form-class">
                         <div class="row mb-3">
@@ -139,54 +81,101 @@
     const downLinkDiv = document.getElementById('down-link');
 
     uploadForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+    e.preventDefault();
 
-        const file = audioFileInput.files[0];
-        if (!file) {
+    const file = audioFileInput.files[0];
+    if (!file) {
         responseDiv.textContent = "Please select an MP4 file.";
         return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+        try {
+            const base64Data = reader.result.split(',')[1];
+
+            const payload = {
+                mp3: base64Data,
+                callback: {
+                    data: {
+                        mp3: file.name
+                    }
+                }
+            };
+
+            console.log("Payload created:", payload);
+
+            // Send the file for processing to /apiv1/separate
+            console.log("Sending request to /apiv1/separate...");
+            const separateResponse = await fetch("http://localhost/apiv1/separate", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!separateResponse.ok) {
+                const error = await separateResponse.json();
+                console.error("Error during /apiv1/separate:", error);
+                responseDiv.textContent = `Error: ${error.message || "Failed to process file"}`;
+                return;
+            }
+
+            const separateResult = await separateResponse.json();
+            console.log("Response from /apiv1/separate:", separateResult);
+            responseDiv.textContent = JSON.stringify(separateResult['output'], null, 2).slice(1, -1);
+
+            // Then fetch the download file from /apiv1/respond
+            console.log("Sending request to /apiv1/respond...");
+            const respondResponse = await fetch("http://localhost/apiv1/respond", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept-Encoding": "identity" // Disable compression
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (respondResponse.ok) {
+                console.log("Response from /apiv1/respond OK. Starting file download...");
+                const blob = await respondResponse.blob();
+                console.log("Blob received:", blob);
+
+                const filename = respondResponse.headers.get("Content-Disposition")
+                    ?.split("filename=")[1]
+                    ?.replace(/"/g, "");
+                console.log("Filename extracted:", filename);
+
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = filename || "downloaded_presentation.pptx";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+
+                downLinkDiv.textContent = "File downloaded successfully!";
+            } else {
+                const error = await respondResponse.json();
+                console.error("Error during /apiv1/respond:", error);
+                downLinkDiv.textContent = `Error: ${error.message || "Failed to download file"}`;
+            }
+        } catch (err) {
+            console.error("An unexpected error occurred:", err);
+            downLinkDiv.textContent = `Unexpected error: ${err.message}`;
         }
+    };
 
-        const reader = new FileReader();
-        reader.onload = async () => {
-        const base64Data = reader.result.split(',')[1];
+    reader.onerror = (err) => {
+        console.error("Error reading file:", err);
+        responseDiv.textContent = `Error reading file: ${err.message}`;
+    };
 
-        const payload = {
-            mp3: base64Data,
-            callback: {
-            data: {
-                mp3: file.name
-            }
-            }
-        };
+    reader.readAsDataURL(file);
+});
 
-        const response1 = await fetch("http://localhost/apiv1/separate", {
-            method: "POST",
-            headers: {
-            "Content-Type": "application/json"
-            },
-            body: JSON.stringify(payload)
-        });
-
-        const result1 = await response1.json();
-        responseDiv.textContent = JSON.stringify(result1['output'], null, 2).slice(1, -1);;
-        
-
-        const response = await fetch("http://localhost/apiv1/respond", {
-            method: "POST",
-            headers: {
-            "Content-Type": "application/json"
-            },
-            body: JSON.stringify(payload)
-        });
-
-        const result = await response.json();
-        downLinkDiv.textContent = JSON.stringify(result['ppt_link'], null, 2).slice(1, -1);;
-        };
-
-        reader.readAsDataURL(file);
-    });
-    </script>
+</script>
 </body>
 </html>
-

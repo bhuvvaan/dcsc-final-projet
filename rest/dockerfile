@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
     rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-RUN pip install --no-cache-dir Flask jsonpickle pillow redis numpy minio flask-cors psycopg2
+RUN pip install --no-cache-dir Flask jsonpickle pillow redis numpy minio flask-cors psycopg2 requests
 
 # Make port 9999 available to the world outside this container
 EXPOSE 9999

@@ -18,6 +18,7 @@ import numpy as np
 import redis
 import json
 import time
+import requests
 
 
 
@@ -139,7 +140,7 @@ def separate():
     }
 
     response_to_frontend = {
-        'output': "File enqueued for processing, please wait for the download link!"
+        'output': "File enqueued for processing, please wait for the download!"
     }
     
     # Encode response using jsonpickle
@@ -214,21 +215,28 @@ def separate():
 
     return Response(response=response_frontend_pickled, status=200, mimetype="application/json")
 
+from flask import send_file
+from io import BytesIO
+
 @app.route('/apiv1/respond', methods=['POST'])   
 @login_required
 def respond():
-# Main loop to process tasks 
-    while True:
-        try:
-            redis_client = redis.StrictRedis(host=REDIS_MASTER_SERVICE_HOST, port=int(REDIS_MASTER_SERVICE_PORT), db=0, decode_responses=True)
+    try:
+        redis_client = redis.StrictRedis(
+            host=REDIS_MASTER_SERVICE_HOST, 
+            port=int(REDIS_MASTER_SERVICE_PORT), 
+            db=0, 
+            decode_responses=True
+        )
+        while True:  # Infinite loop to continuously check the Redis queue
             task_from_queue = redis_client.lpop("toRest")
             if task_from_queue:
                 task_data = jsonpickle.decode(task_from_queue)
                 name_of_file = task_data['id']
                 app.logger.debug(f"Extracting link from postgres for file: {name_of_file}")
-                import psycopg2
 
-                # Connection details
+                import psycopg2
+                # Connect to PostgreSQL
                 conn = psycopg2.connect(
                     host="my-postgresql",  # Update with your database host
                     port=5432,             # Default PostgreSQL port
@@ -237,44 +245,81 @@ def respond():
                     database="postgres"    # The database name
                 )
 
-                # Set the isolation level to AUTOCOMMIT
                 conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
-
-                # Create a cursor object
                 cur = conn.cursor()
 
                 # Query to retrieve ppt_link from video_details
-                query = f"SELECT ppt_link FROM video_details WHERE video_id = {name_of_file};"
-
+                query = "SELECT ppt_link FROM video_details WHERE video_id = %s;"
                 try:
                     # Execute the query
-                    cur.execute(query)
-                    
+                    cur.execute(query, (name_of_file,))
                     result = cur.fetchone()
                     if result:
                         ppt_link = result[0]
-                        response_to_frontend = {'ppt_link': ppt_link}
-                    else:
-                        response_to_frontend = {'error': 'No PPT link found for the given file ID'}
+                        app.logger.debug(f"Downloading from link: {ppt_link}")
 
-                    response_to_frontend = jsonpickle.encode(response_to_frontend)
-                    return Response(response=response_to_frontend, status=200, mimetype="application/json")
+                        try:
+                            response = requests.get(ppt_link, stream=True)
+                            app.logger.info(f"Received HTTP response with status code: {response.status_code}")
+                            app.logger.debug(f"Response Headers: {response.headers}")
+                            
+                            if response.status_code == 200:
+                                app.logger.debug(f"Content-Length: {response.headers.get('Content-Length')}")
+                                app.logger.info(f"File download successful. Preparing file for download: {name_of_file}_presentation.pptx")
+                                
+                                # Serve the file back as a downloadable response
+                                file_data = BytesIO(response.content)
+                                file_data.seek(0)  # Reset stream pointer
+                                
+                                filename = f"{name_of_file}_presentation.pptx"
+                                app.logger.info(f"Serving file as attachment: {filename}")
+                                
+                                if response.status_code == 200:
+                                    def generate():
+                                        for chunk in response.iter_content(chunk_size=4096):
+                                            yield chunk
+
+                                    return Response(
+                                        generate(),
+                                        headers={
+                                            "Content-Disposition": f'attachment; filename="{name_of_file}_presentation.pptx"',
+                                            "Content-Type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                                        },
+                                    )
+                            else:
+                                app.logger.error(f"Failed to download file. HTTP Status: {response.status_code}")
+                                app.logger.error(f"Response content: {response.text}")
+                                return {
+                                    "error": f"Failed to download file. HTTP Status: {response.status_code}",
+                                    "details": response.text
+                                }, 500
+
+                        except requests.exceptions.RequestException as e:
+                            app.logger.error(f"An exception occurred during the file download: {e}")
+                            return {"error": "An error occurred while trying to download the file.", "details": str(e)}, 500
+                        except Exception as e:
+                            app.logger.error(f"An unexpected error occurred: {e}")
+                            return {"error": "An unexpected error occurred.", "details": str(e)}, 500
+                    else:
+                        app.logger.error("No PPT link found for the given file ID")
+                        return {"error": "No PPT link found for the given file ID"}, 404
 
                 except Exception as e:
-                    app.logger.error(f"Error occurred: {e}")
+                    app.logger.error(f"Database query error: {e}")
+                    return {"error": f"Database query error: {e}"}, 500
+
                 finally:
-                    # Close the cursor and connection
                     cur.close()
                     conn.close()
 
             else:
                 app.logger.debug("No tasks in queue, waiting...")
-                time.sleep(5)
+                time.sleep(5)  # Sleep for a while before checking the queue again
 
-        except Exception as e:
-            app.logger.debug(f"An unexpected error occurred: {e}")
-            app.logger.debug("Continuing to next iteration...")
-            time.sleep(5)
+    except Exception as e:
+        app.logger.error(f"An unexpected error occurred: {e}")
+        return {"error": f"Unexpected error: {e}"}, 500
+
 # Start Flask app
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=9999, debug=True)

@@ -232,19 +232,21 @@ def read_video(FILE_NAME):
     create_ppt_from_images(image_folder, output_ppt)
 
 def update_postgres(id):
-    video_name = str(id) + '_video.mp4'
-    video_url = MINIO_CLIENT.presigned_get_object(BUCKET_NAME, video_name)
-    print(f"Access the file at: {video_url}")
+
 
     ppt_name = str(id) + "_presentation.pptx" 
     from minio import Minio
     from datetime import timedelta
 
-    # Initialize MinIO client with the correct hostname
-    # minio_client = Minio(
-    #     "localhost:9000",  # Use localhost for port-forwarding
+    #Initialize MinIO client with the correct hostname
+    # MINIO_CLIENT = Minio(
+    #     "localhost/minio",  # Use localhost for port-forwarding
     #      access_key=minioUser, secret_key=minioPasswd, secure=False
     # )
+
+    video_name = str(id) + '_video.mp4'
+    video_url = MINIO_CLIENT.presigned_get_object(BUCKET_NAME, video_name)
+    print(f"Access the file at: {video_url}")
 
     # Generate a new presigned URL
     bucket_name = "ppt-result"

@@ -3,7 +3,7 @@ kind: Ingress
 metadata:
   name: frontend-ingress
   annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: "16m"  # Set the desired size limit
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"  # Set the desired size limit
 spec:
   ingressClassName: "nginx"
   rules:
