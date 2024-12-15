@@ -25,6 +25,8 @@ This repository includes the complete code to build a software service using Kub
 
 Feel free to reach out for any improvements or comments!
 
+Project demo can be found here [https://www.youtube.com/watch?v=hMuxLK65RBs](url)
+
 Credits:
 Bhuvvaan Punukolu &
 Prathik Jain
